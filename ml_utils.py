@@ -3,15 +3,41 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
-from xgboost import XGBRegressor
+try:
+    from xgboost import XGBRegressor
+    XGB_AVAILABLE = True
+except Exception:
+    XGB_AVAILABLE = False
 from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.impute import SimpleImputer
 import joblib
 
+def read_csv_with_fallback(filepath):
+    encodings_to_try = ['utf-8', 'utf-8-sig', 'cp1252', 'latin1']
+    last_error = None
+    for enc in encodings_to_try:
+        try:
+            return pd.read_csv(filepath, encoding=enc, low_memory=False)
+        except Exception as e:
+            last_error = e
+            continue
+    # Last resort: replace errors
+    try:
+        return pd.read_csv(
+            filepath,
+            encoding='latin1',
+            encoding_errors='replace',
+            low_memory=False
+        )
+    except Exception:
+        if last_error is not None:
+            raise last_error
+        raise ValueError('Failed to read CSV with common encodings')
+
 def load_and_clean_data(filepath):
     # Load data based on file extension
     if filepath.endswith('.csv'):
-        df = pd.read_csv(filepath)
+        df = read_csv_with_fallback(filepath)
     elif filepath.endswith('.xlsx'):
         df = pd.read_excel(filepath)
     else:
@@ -48,19 +74,35 @@ def train_models(df, target_column, features=None):
     # Prepare data
     X = df[features]
     y = df[target_column]
+
+    # Ensure target is numeric
+    if not pd.api.types.is_numeric_dtype(y):
+        y = pd.to_numeric(y, errors='coerce')
+    # Drop rows where target could not be converted
+    valid_mask = ~y.isna()
+    X = X[valid_mask]
+    y = y[valid_mask]
+    if len(y) < 2:
+        raise ValueError('Not enough valid rows after cleaning to train (need at least 2).')
     
     # Convert categorical variables to numeric
     X = pd.get_dummies(X)
     
-    # Split data
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    # Split data with safe test size (at least 1 sample in test and train)
+    n_samples = len(X)
+    test_size = max(1, int(round(0.2 * n_samples)))
+    test_size = min(test_size, n_samples - 1)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=test_size, random_state=42
+    )
     
     # Initialize models
     models = {
         'Linear Regression': LinearRegression(),
-        'Random Forest': RandomForestRegressor(n_estimators=100, random_state=42),
-        'XGBoost': XGBRegressor(random_state=42)
+        'Random Forest': RandomForestRegressor(n_estimators=200, random_state=42)
     }
+    if XGB_AVAILABLE:
+        models['XGBoost'] = XGBRegressor(random_state=42)
     
     results = {}
     best_score = -float('inf')

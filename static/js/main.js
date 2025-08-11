@@ -313,8 +313,8 @@ function initializeTrainingForm() {
                 sessionStorage.setItem('target', target);
                 sessionStorage.setItem('features', JSON.stringify(features));
                 
-                // Redirect to predictions page
-                window.location.href = '/predict';
+                // Redirect to dashboard to view training results
+                window.location.href = '/dashboard';
             } else {
                 showError(data.error || 'Training failed');
                 trainButton.disabled = false;
@@ -342,8 +342,56 @@ function initializePredictionForms() {
 
 // Dashboard Initialization
 function initializeDashboard() {
-    const dashboard = document.querySelector('.dashboard');
-    if (!dashboard) return;
+    // Detect dashboard by presence of metrics container
+    const metricsEl = document.getElementById('model-metrics');
+    if (!metricsEl) return;
 
-    // Dashboard initialization code will be added here
+    const bestModelEl = document.getElementById('best-model');
+    const r2El = document.getElementById('r2-score');
+    const rmseEl = document.getElementById('rmse-score');
+    const featChartCanvas = document.getElementById('feature-importance-chart');
+
+    fetch('/metrics')
+        .then(async (res) => {
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to load metrics');
+
+            bestModelEl && (bestModelEl.textContent = data.model_type || '-');
+            const metrics = data.metrics || {};
+            r2El && (r2El.textContent = typeof metrics.test_r2 === 'number' ? metrics.test_r2.toFixed(4) : '-');
+            rmseEl && (rmseEl.textContent = typeof metrics.test_rmse === 'number' ? metrics.test_rmse.toFixed(4) : '-');
+
+            // Feature importance chart (if available)
+            if (featChartCanvas && data.feature_importance) {
+                const entries = Object.entries(data.feature_importance);
+                entries.sort((a, b) => b[1] - a[1]);
+                const top = entries.slice(0, 15);
+                const labels = top.map(([k]) => k);
+                const values = top.map(([, v]) => v);
+
+                new Chart(featChartCanvas.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: 'Importance',
+                            data: values,
+                            backgroundColor: 'rgba(37, 99, 235, 0.5)',
+                            borderColor: 'rgba(37, 99, 235, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: { ticks: { autoSkip: false } },
+                            y: { beginAtZero: true }
+                        }
+                    }
+                });
+            }
+        })
+        .catch((err) => {
+            showError(err.message || 'Failed to load dashboard metrics');
+        });
 }

@@ -9,6 +9,34 @@ from sklearn.metrics import mean_squared_error, r2_score
 import joblib
 import os
 import traceback
+import ml_utils
+
+
+def to_serializable(obj):
+    """Recursively convert numpy/pandas types to native Python types for JSON."""
+    try:
+        import numpy as _np
+        import pandas as _pd
+    except Exception:
+        _np = None
+        _pd = None
+
+    if _np is not None and isinstance(obj, _np.generic):
+        return obj.item()
+    if _np is not None and isinstance(obj, _np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, dict):
+        return {str(k): to_serializable(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple, set)):
+        return [to_serializable(v) for v in obj]
+    # Convert pandas NA to None
+    if _pd is not None:
+        try:
+            if _pd.isna(obj):
+                return None
+        except Exception:
+            pass
+    return obj
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'  # Required for flashing messages
@@ -157,9 +185,9 @@ def upload_file():
             file.save(filepath)
             print(f"File saved to: {filepath}")
             
-            # Read the file to validate and get columns
+            # Read the file to validate and get columns (robust encoding handling)
             if filename.lower().endswith('.csv'):
-                df = pd.read_csv(filepath)
+                df = ml_utils.read_csv_with_fallback(filepath)
             else:
                 df = pd.read_excel(filepath)
             
@@ -208,6 +236,11 @@ def train_model():
         filename = data.get('filename')
         if not filename:
             return jsonify({'error': 'No file specified'}), 400
+
+        # Ensure target is not included in features
+        features = [f for f in features if f != target_column]
+        if not features:
+            return jsonify({'error': 'No valid features remain after removing target from features'}), 400
         
         # Load and process the data
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -215,7 +248,8 @@ def train_model():
             return jsonify({'error': 'File not found'}), 404
             
         try:
-            df = load_and_clean_data(filepath)
+            # Use robust loader that imputes and prepares data
+            df = ml_utils.load_and_clean_data(filepath)
         except Exception as e:
             return jsonify({'error': f'Error loading data: {str(e)}'}), 400
         
@@ -226,14 +260,48 @@ def train_model():
         
         # Train the model
         try:
-            model_info = train_models(df, target_column, features)
+            # Train multiple models and pick the best
+            results = ml_utils.train_models(df, target_column, features)
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
         except Exception as e:
             return jsonify({'error': f'Error during training: {str(e)}'}), 500
         
         # Save the model
         model_path = os.path.join(MODELS_FOLDER, 'model.joblib')
         try:
-            save_model(model_info, model_path)
+            best_model = results['best_model']
+            ml_utils.save_model(best_model, model_path)
+            # Persist the one-hot encoded feature names for consistent inference
+            features_path = os.path.join(MODELS_FOLDER, 'features.joblib')
+            joblib.dump(results['features'], features_path)
+
+            # Compute evaluation metrics for dashboard
+            try:
+                X = pd.get_dummies(df[features])
+                # Ensure columns align to training features
+                for col in results['features']:
+                    if col not in X.columns:
+                        X[col] = 0
+                X = X[results['features']]
+                y = df[target_column]
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=0.2, random_state=42
+                )
+                # Model is already fitted inside train_models; evaluate on test split
+                y_pred_test = best_model.predict(X_test)
+                test_mse = mean_squared_error(y_test, y_pred_test)
+                test_rmse = float(np.sqrt(test_mse))
+                test_r2 = float(r2_score(y_test, y_pred_test))
+                metrics_path = os.path.join(MODELS_FOLDER, 'metrics.joblib')
+                joblib.dump({
+                    'best_model_type': type(best_model).__name__,
+                    'test_r2': test_r2,
+                    'test_rmse': test_rmse
+                }, metrics_path)
+            except Exception:
+                # Best-effort metrics; ignore errors
+                pass
         except Exception as e:
             return jsonify({'error': f'Error saving model: {str(e)}'}), 500
         
@@ -241,8 +309,9 @@ def train_model():
         return jsonify({
             'success': True,
             'message': 'Model trained successfully',
-            'metrics': model_info['metrics'],
-            'feature_importance': model_info['feature_importance']
+            # Echo back simple summary (frontend currently ignores these)
+            'best_model_type': type(results['best_model']).__name__,
+            'features': results['features']
         })
         
     except Exception as e:
@@ -259,7 +328,7 @@ def make_predictions():
             return jsonify({'error': 'No trained model found. Please train a model first.'}), 404
             
         try:
-            model_info = load_model(model_path)
+            model = ml_utils.load_model(model_path)
         except Exception as e:
             return jsonify({'error': f'Error loading model: {str(e)}'}), 500
         
@@ -275,7 +344,8 @@ def make_predictions():
                 filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 file.save(filepath)
                 
-                df = load_and_clean_data(filepath)
+                # Clean input data similarly to training for robust inference
+                df = ml_utils.load_and_clean_data(filepath)
             else:
                 # Single prediction
                 data = request.json
@@ -284,7 +354,7 @@ def make_predictions():
                 df = pd.DataFrame([data])
             
             # Make predictions
-            predictions = make_prediction(model_info, df)
+            predictions = ml_utils.make_prediction(model, df)
             
             return jsonify({
                 'success': True,
@@ -310,18 +380,54 @@ def get_metrics():
             return jsonify({'error': 'No trained model found. Please train a model first.'}), 404
             
         try:
-            model_info = load_model(model_path)
+            model = ml_utils.load_model(model_path)
         except Exception as e:
             return jsonify({'error': f'Error loading model: {str(e)}'}), 500
         
-        # Return model metrics and information
-        return jsonify({
+        # Load persisted features if available
+        features_path = os.path.join(MODELS_FOLDER, 'features.joblib')
+        features = None
+        if os.path.exists(features_path):
+            try:
+                features = joblib.load(features_path)
+            except Exception:
+                features = None
+
+        # Load persisted metrics if available
+        metrics_summary = None
+        metrics_path = os.path.join(MODELS_FOLDER, 'metrics.joblib')
+        if os.path.exists(metrics_path):
+            try:
+                metrics_summary = joblib.load(metrics_path)
+            except Exception:
+                metrics_summary = None
+
+        # Compute feature importance if supported by the model and features are known
+        feature_importance = None
+        if features is not None:
+            try:
+                if hasattr(model, 'feature_importances_'):
+                    importances = getattr(model, 'feature_importances_')
+                    if len(importances) == len(features):
+                        feature_importance = dict(zip(features, importances))
+                elif hasattr(model, 'coef_'):
+                    coefs = getattr(model, 'coef_')
+                    # Handle multi-output by taking magnitude sum
+                    if np.ndim(coefs) > 1:
+                        coefs = np.sum(np.abs(coefs), axis=0)
+                    if len(coefs) == len(features):
+                        feature_importance = dict(zip(features, np.abs(coefs)))
+            except Exception:
+                feature_importance = None
+
+        # Return model information
+        return jsonify(to_serializable({
             'success': True,
-            'model_type': str(type(model_info['model']).__name__),
-            'features': model_info['feature_columns'],
-            'metrics': model_info['metrics'],
-            'feature_importance': model_info['feature_importance']
-        })
+            'model_type': str(type(model).__name__),
+            'features': features,
+            'metrics': metrics_summary or {},
+            'feature_importance': feature_importance
+        }))
         
     except Exception as e:
         print(f"Unexpected error getting metrics: {str(e)}")
