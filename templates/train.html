@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Train Model{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <h1 class="text-3xl font-bold mb-8">Train Your Model</h1>
+    
+    <div id="no-file-warning" class="hidden bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg p-4 mb-8">
+        <div class="flex">
+            <svg class="h-5 w-5 text-yellow-400 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <div>
+                <h3 class="font-medium">No file selected</h3>
+                <p class="mt-1 text-sm">Please upload a file first to begin training.</p>
+                <a href="/" class="mt-2 inline-block text-yellow-600 hover:text-yellow-700">Go to Upload Page</a>
+            </div>
+        </div>
+    </div>
+    
+    <div id="training-form-container" class="bg-white rounded-lg shadow-lg p-8 mb-8">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-semibold">Model Configuration</h2>
+            <div id="file-badge" class="hidden bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-sm font-medium">
+                <span id="current-file">No file selected</span>
+            </div>
+        </div>
+        
+        <form id="training-form" class="space-y-6">
+            <div>
+                <label for="target-column" class="block text-gray-700 font-medium mb-2">Select Target Variable</label>
+                <select id="target-column" class="w-full border rounded-lg px-4 py-2 bg-white">
+                    <option value="">Select a column...</option>
+                </select>
+                <p class="mt-1 text-sm text-gray-500">Choose the variable you want to predict</p>
+            </div>
+            
+            <div>
+                <label class="block text-gray-700 font-medium mb-2">Select Features</label>
+                <div id="feature-list" class="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-4">
+                    <!-- Features will be populated dynamically -->
+                </div>
+                
+                <div class="mt-2 flex items-center space-x-4">
+                    <button type="button" id="select-all" class="text-blue-600 text-sm hover:text-blue-800 flex items-center">
+                        <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
+                        </svg>
+                        Select All
+                    </button>
+                    <button type="button" id="deselect-all" class="text-blue-600 text-sm hover:text-blue-800 flex items-center">
+                        <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        Deselect All
+                    </button>
+                </div>
+            </div>
+            
+            <button type="submit" id="train-button" class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-200 flex items-center justify-center space-x-2">
+                <span id="button-text">Train Models</span>
+                <svg id="loading-spinner" class="animate-spin h-5 w-5 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </button>
+        </form>
+    </div>
+    
+    <div id="training-results" class="hidden">
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6">Training Results</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="border rounded-lg p-4">
+                    <h3 class="font-medium mb-2">Linear Regression</h3>
+                    <div id="linear-metrics" class="space-y-1 text-sm">
+                        <!-- Metrics will be populated dynamically -->
+                    </div>
+                </div>
+                
+                <div class="border rounded-lg p-4">
+                    <h3 class="font-medium mb-2">Random Forest</h3>
+                    <div id="rf-metrics" class="space-y-1 text-sm">
+                        <!-- Metrics will be populated dynamically -->
+                    </div>
+                </div>
+                
+                <div class="border rounded-lg p-4">
+                    <h3 class="font-medium mb-2">XGBoost</h3>
+                    <div id="xgb-metrics" class="space-y-1 text-sm">
+                        <!-- Metrics will be populated dynamically -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-8">
+                <h3 class="text-xl font-semibold mb-4">Model Performance Comparison</h3>
+                <canvas id="performance-chart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold mb-8">Analytics Dashboard</h1>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <!-- Dataset Stats Card -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-semibold mb-4">Dataset Overview</h2>
+            <div id="dataset-stats" class="space-y-2">
+                <p>Total Records: <span id="total-records" class="font-medium">-</span></p>
+                <p>Features: <span id="total-features" class="font-medium">-</span></p>
+                <p>Target: <span id="target-variable" class="font-medium">-</span></p>
+            </div>
+        </div>
+        
+        <!-- Missing Values Card -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-semibold mb-4">Missing Values</h2>
+            <div id="missing-values" class="space-y-2">
+                <!-- Missing values summary will be populated dynamically -->
+            </div>
+        </div>
+        
+        <!-- Model Performance Card -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-semibold mb-4">Model Performance</h2>
+            <div id="model-metrics" class="space-y-2">
+                <p>Best Model: <span id="best-model" class="font-medium">-</span></p>
+                <p>R² Score: <span id="r2-score" class="font-medium">-</span></p>
+                <p>RMSE: <span id="rmse-score" class="font-medium">-</span></p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Correlation Heatmap -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-semibold mb-4">Correlation Heatmap</h2>
+            <div class="aspect-square">
+                <canvas id="correlation-heatmap"></canvas>
+            </div>
+        </div>
+        
+        <!-- Feature Importance -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-semibold mb-4">Feature Importance</h2>
+            <div class="aspect-square">
+                <canvas id="feature-importance-chart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Prediction Trend -->
+    <div class="mt-8 bg-white rounded-lg shadow-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Prediction Trend</h2>
+        <div class="h-80">
+            <canvas id="prediction-trend"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
