@@ -181,12 +181,13 @@ function initializeFileUploads() {
             };
             
             xhr.send(formData);
-        } catch (error) {
-            showError('An unexpected error occurred');
-            uploadButton.disabled = false;
-            buttonText.textContent = 'Try Again';
-            loadingSpinner.classList.add('hidden');
-        }
+                    } catch (error) {
+                console.error('Upload error:', error);
+                showError(`An unexpected error occurred: ${error.message || 'Network error'}`);
+                uploadButton.disabled = false;
+                buttonText.textContent = 'Try Again';
+                loadingSpinner.classList.add('hidden');
+            }
     });
 }
 
@@ -214,7 +215,15 @@ function initializeTrainingForm() {
     currentFile.textContent = filename;
     fileBadge.classList.remove('hidden');
     
+    // Get form elements
+    const analysisTypeSelect = document.getElementById('analysis-type');
+    const predictionFields = document.getElementById('prediction-fields');
+    const rfmFields = document.getElementById('rfm-fields');
     const targetSelect = document.getElementById('target-column');
+    const customerIdSelect = document.getElementById('customer-id-col');
+    const dateSelect = document.getElementById('date-col');
+    const unitpriceSelect = document.getElementById('unitprice-col');
+    const quantitySelect = document.getElementById('quantity-col');
     const featureList = document.getElementById('feature-list');
     const selectAll = document.getElementById('select-all');
     const deselectAll = document.getElementById('deselect-all');
@@ -222,13 +231,21 @@ function initializeTrainingForm() {
     const buttonText = document.getElementById('button-text');
     const loadingSpinner = document.getElementById('loading-spinner');
     
-    // Populate columns
+    // Populate all dropdowns with columns
     columns.forEach(column => {
         // Add to target dropdown
         const option = document.createElement('option');
         option.value = column;
         option.textContent = column;
         targetSelect.appendChild(option);
+        
+        // Add to RFQU dropdowns
+        [customerIdSelect, dateSelect, unitpriceSelect, quantitySelect].forEach(select => {
+            const rfquOption = document.createElement('option');
+            rfquOption.value = column;
+            rfquOption.textContent = column;
+            select.appendChild(rfquOption);
+        });
         
         // Add to feature list
         const div = document.createElement('div');
@@ -240,6 +257,21 @@ function initializeTrainingForm() {
             <label for="feature-${column}" class="text-gray-700">${column}</label>
         `;
         featureList.appendChild(div);
+    });
+    
+    // Handle analysis type change
+    analysisTypeSelect.addEventListener('change', () => {
+        const analysisType = analysisTypeSelect.value;
+        
+        if (analysisType === 'rfqu') {
+            predictionFields.classList.add('hidden');
+            rfmFields.classList.remove('hidden');
+            buttonText.textContent = 'Start RFQU Analysis';
+        } else {
+            predictionFields.classList.remove('hidden');
+            rfmFields.classList.add('hidden');
+            buttonText.textContent = 'Train Models';
+        }
     });
     
     // Handle select/deselect all
@@ -274,58 +306,125 @@ function initializeTrainingForm() {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const target = targetSelect.value;
-        const features = Array.from(featureList.querySelectorAll('input[type="checkbox"]:checked'))
-            .map(checkbox => checkbox.value);
+        const analysisType = analysisTypeSelect.value;
         
-        if (!target) {
-            showError('Please select a target variable');
-            return;
-        }
-        
-        if (features.length === 0) {
-            showError('Please select at least one feature');
-            return;
-        }
-        
-        // Update UI for training start
-        trainButton.disabled = true;
-        buttonText.textContent = 'Training Models...';
-        loadingSpinner.classList.remove('hidden');
-        
-        try {
-            const response = await fetch('/train', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    target,
-                    features,
-                    filename
-                })
-            });
+        if (analysisType === 'rfqu') {
+            // RFQU Analysis
+            const customerIdCol = customerIdSelect.value;
+            const dateCol = dateSelect.value;
+            const unitpriceCol = unitpriceSelect.value;
+            const quantityCol = quantitySelect.value;
             
-            const data = await response.json();
+            if (!customerIdCol || !dateCol || !unitpriceCol || !quantityCol) {
+                showError('Please select Customer ID, Invoice Date, Unit Price, and Quantity columns for RFQU analysis');
+                return;
+            }
             
-            if (response.ok) {
-                // Store the selected features for later use
-                sessionStorage.setItem('target', target);
-                sessionStorage.setItem('features', JSON.stringify(features));
+            // Update UI for analysis start
+            trainButton.disabled = true;
+            buttonText.textContent = 'Performing RFQU Analysis...';
+            loadingSpinner.classList.remove('hidden');
+            
+            try {
+                const response = await fetch('/train', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        analysis_type: 'rfqu',
+                        customer_id_col: customerIdCol,
+                        date_col: dateCol,
+                        unitprice_col: unitpriceCol,
+                        quantity_col: quantityCol,
+                        filename
+                    })
+                });
                 
-                // Redirect to dashboard to view training results
-                window.location.href = '/dashboard';
-            } else {
-                showError(data.error || 'Training failed');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Store the RFQU parameters for later use
+                    sessionStorage.setItem('analysis_type', 'rfqu');
+                    sessionStorage.setItem('customer_id_col', customerIdCol);
+                    sessionStorage.setItem('date_col', dateCol);
+                    sessionStorage.setItem('unitprice_col', unitpriceCol);
+                    sessionStorage.setItem('quantity_col', quantityCol);
+                    
+                    // Redirect to dashboard to view RFQU results
+                    window.location.href = '/dashboard';
+                } else {
+                    showError(data.error || 'RFQU analysis failed');
+                    trainButton.disabled = false;
+                    buttonText.textContent = 'Start RFQU Analysis';
+                    loadingSpinner.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('RFQU analysis error:', error);
+                showError(`An unexpected error occurred: ${error.message || 'Network error'}`);
+                trainButton.disabled = false;
+                buttonText.textContent = 'Start RFQU Analysis';
+                loadingSpinner.classList.add('hidden');
+            }
+            
+        } else {
+            // Prediction Model Training
+            const target = targetSelect.value;
+            const features = Array.from(featureList.querySelectorAll('input[type="checkbox"]:checked'))
+                .map(checkbox => checkbox.value);
+            
+            if (!target) {
+                showError('Please select a target variable');
+                return;
+            }
+            
+            if (features.length === 0) {
+                showError('Please select at least one feature');
+                return;
+            }
+            
+            // Update UI for training start
+            trainButton.disabled = true;
+            buttonText.textContent = 'Training Models...';
+            loadingSpinner.classList.remove('hidden');
+            
+            try {
+                const response = await fetch('/train', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        analysis_type: 'prediction',
+                        target,
+                        features,
+                        filename
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Store the selected features for later use
+                    sessionStorage.setItem('analysis_type', 'prediction');
+                    sessionStorage.setItem('target', target);
+                    sessionStorage.setItem('features', JSON.stringify(features));
+                    
+                    // Redirect to dashboard to view training results
+                    window.location.href = '/dashboard';
+                } else {
+                    showError(data.error || 'Training failed');
+                    trainButton.disabled = false;
+                    buttonText.textContent = 'Train Models';
+                    loadingSpinner.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('Model training error:', error);
+                showError(`An unexpected error occurred: ${error.message || 'Network error'}`);
                 trainButton.disabled = false;
                 buttonText.textContent = 'Train Models';
                 loadingSpinner.classList.add('hidden');
             }
-        } catch (error) {
-            showError('An unexpected error occurred');
-            trainButton.disabled = false;
-            buttonText.textContent = 'Train Models';
-            loadingSpinner.classList.add('hidden');
         }
     });
 }
@@ -408,10 +507,25 @@ function initializeDashboard() {
             const totalRecordsEl = document.getElementById('total-records');
             const totalFeaturesEl = document.getElementById('total-features');
             const targetVariableEl = document.getElementById('target-variable');
+            const targetLabel = document.getElementById('target-label');
             
             if (totalRecordsEl) totalRecordsEl.textContent = datasetInfo.n_rows || '-';
             if (totalFeaturesEl) totalFeaturesEl.textContent = datasetInfo.n_columns || '-';
-            if (targetVariableEl) targetVariableEl.textContent = datasetInfo.target_column || '-';
+            
+            // Handle different analysis types
+            if (datasetInfo.analysis_type === 'rfqu') {
+                if (targetLabel) targetLabel.textContent = 'Analysis Type: ';
+                if (targetVariableEl) targetVariableEl.textContent = 'RFQU Customer Segmentation';
+                
+                // Show RFQU results
+                showRFQUResults();
+            } else {
+                if (targetLabel) targetLabel.textContent = 'Target: ';
+                if (targetVariableEl) targetVariableEl.textContent = datasetInfo.target_column || '-';
+                
+                // Show prediction results
+                showPredictionResults();
+            }
 
             // Update missing values
             const missingValuesEl = document.getElementById('missing-values');
@@ -561,6 +675,258 @@ function createPredictionTrendChart(canvas) {
             scales: {
                 y: {
                     beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+// Show RFQU results
+function showRFQUResults() {
+    // Hide prediction-specific elements
+    const modelMetrics = document.getElementById('model-metrics');
+    const rfmMetrics = document.getElementById('rfm-metrics');
+    const rfquResults = document.getElementById('rfqu-results');
+    const predictionTrend = document.getElementById('prediction-trend').parentElement.parentElement;
+    
+    if (modelMetrics) modelMetrics.classList.add('hidden');
+    if (rfmMetrics) rfmMetrics.classList.remove('hidden');
+    if (rfquResults) rfquResults.classList.remove('hidden');
+    if (predictionTrend) predictionTrend.classList.add('hidden');
+    
+    // Update results title
+    const resultsTitle = document.getElementById('results-title');
+    if (resultsTitle) resultsTitle.textContent = 'RFQU Analysis Results';
+    
+    // Load RFQU results
+    fetch('/rfqu-results')
+        .then(async (res) => {
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to load RFQU results');
+
+            const rfquResults = data.rfqu_results;
+            
+            // Update RFQU metrics
+            const totalCustomersEl = document.getElementById('total-customers');
+            const totalSegmentsEl = document.getElementById('total-segments');
+            const analysisTypeDisplay = document.getElementById('analysis-type-display');
+            
+            if (totalCustomersEl) totalCustomersEl.textContent = rfquResults.rfqu_data ? rfquResults.rfqu_data.length : '-';
+            if (totalSegmentsEl) totalSegmentsEl.textContent = rfquResults.segment_names ? rfquResults.segment_names.length : '-';
+            if (analysisTypeDisplay) analysisTypeDisplay.textContent = 'K-means Clustering';
+            
+            // Create segment cards
+            createSegmentCards(rfquResults);
+            
+            // Create RFQU charts
+            createRFQUCharts(rfquResults);
+        })
+        .catch((err) => {
+            console.warn('Failed to load RFQU results:', err.message);
+        });
+}
+
+// Show prediction results
+function showPredictionResults() {
+    // Show prediction-specific elements
+    const modelMetrics = document.getElementById('model-metrics');
+    const rfmMetrics = document.getElementById('rfm-metrics');
+    const rfquResults = document.getElementById('rfqu-results');
+    const predictionTrend = document.getElementById('prediction-trend').parentElement.parentElement;
+    
+    if (modelMetrics) modelMetrics.classList.remove('hidden');
+    if (rfmMetrics) rfmMetrics.classList.add('hidden');
+    if (rfquResults) rfquResults.classList.add('hidden');
+    if (predictionTrend) predictionTrend.classList.remove('hidden');
+    
+    // Update results title
+    const resultsTitle = document.getElementById('results-title');
+    if (resultsTitle) resultsTitle.textContent = 'Model Performance';
+}
+
+// Create segment cards
+function createSegmentCards(rfquResults) {
+    const segmentCards = document.getElementById('segment-cards');
+    if (!segmentCards || !rfquResults.cluster_stats) return;
+    
+    const stats = rfquResults.cluster_stats;
+    let cardsHtml = '';
+    
+    // Handle both object and array formats
+    if (Array.isArray(stats)) {
+        stats.forEach((clusterData, index) => {
+            cardsHtml += `
+                <div class="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-lg p-4 border border-blue-200">
+                    <h3 class="font-semibold text-blue-900 mb-2">${clusterData.segment}</h3>
+                    <div class="space-y-1 text-sm text-blue-800">
+                        <p>Customers: <span class="font-medium">${clusterData.count}</span></p>
+                        <p>Avg Recency: <span class="font-medium">${clusterData.recency.toFixed(0)} days</span></p>
+                        <p>Avg Frequency: <span class="font-medium">${clusterData.frequency.toFixed(1)}</span></p>
+                        <p>Avg Quantity: <span class="font-medium">${clusterData.quantity.toFixed(1)}</span></p>
+                        <p>Avg Unit Price: <span class="font-medium">$${clusterData.unitprice.toFixed(2)}</span></p>
+                        <p>Avg Monetary: <span class="font-medium">$${clusterData.monetary.toFixed(2)}</span></p>
+                    </div>
+                </div>
+            `;
+        });
+    } else {
+        Object.keys(stats).forEach(cluster => {
+            const clusterData = stats[cluster];
+            cardsHtml += `
+                <div class="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-lg p-4 border border-blue-200">
+                    <h3 class="font-semibold text-blue-900 mb-2">${clusterData.segment}</h3>
+                    <div class="space-y-1 text-sm text-blue-800">
+                        <p>Customers: <span class="font-medium">${clusterData.count}</span></p>
+                        <p>Avg Recency: <span class="font-medium">${clusterData.recency.toFixed(0)} days</span></p>
+                        <p>Avg Frequency: <span class="font-medium">${clusterData.frequency.toFixed(1)}</span></p>
+                        <p>Avg Quantity: <span class="font-medium">${clusterData.quantity.toFixed(1)}</span></p>
+                        <p>Avg Unit Price: <span class="font-medium">$${clusterData.unitprice.toFixed(2)}</span></p>
+                        <p>Avg Monetary: <span class="font-medium">$${clusterData.monetary.toFixed(2)}</span></p>
+                    </div>
+                </div>
+            `;
+        });
+    }
+    
+    segmentCards.innerHTML = cardsHtml;
+}
+
+// Create RFQU charts
+function createRFQUCharts(rfquResults) {
+    if (!rfquResults.rfqu_data) return;
+    
+    const rfquData = rfquResults.rfqu_data;
+    
+    // Segment distribution chart
+    const segmentCanvas = document.getElementById('segment-chart');
+    if (segmentCanvas) {
+        createSegmentChart(segmentCanvas, rfquResults);
+    }
+    
+    // RFQU distribution charts
+    const recencyCanvas = document.getElementById('recency-chart');
+    if (recencyCanvas) {
+        const recencyValues = rfquData.map(record => record.recency);
+        createDistributionChart(recencyCanvas, recencyValues, 'Recency (days)', 'rgba(59, 130, 246, 0.8)');
+    }
+    
+    const frequencyCanvas = document.getElementById('frequency-chart');
+    if (frequencyCanvas) {
+        const frequencyValues = rfquData.map(record => record.frequency);
+        createDistributionChart(frequencyCanvas, frequencyValues, 'Frequency', 'rgba(16, 185, 129, 0.8)');
+    }
+    
+    const quantityCanvas = document.getElementById('quantity-chart');
+    if (quantityCanvas) {
+        const quantityValues = rfquData.map(record => record.quantity);
+        createDistributionChart(quantityCanvas, quantityValues, 'Quantity', 'rgba(245, 158, 11, 0.8)');
+    }
+    
+    const unitpriceCanvas = document.getElementById('unitprice-chart');
+    if (unitpriceCanvas) {
+        const unitpriceValues = rfquData.map(record => record.unitprice);
+        createDistributionChart(unitpriceCanvas, unitpriceValues, 'Unit Price ($)', 'rgba(139, 92, 246, 0.8)');
+    }
+    
+    const monetaryCanvas = document.getElementById('monetary-chart');
+    if (monetaryCanvas) {
+        const monetaryValues = rfquData.map(record => record.monetary);
+        createDistributionChart(monetaryCanvas, monetaryValues, 'Monetary Value ($)', 'rgba(236, 72, 153, 0.8)');
+    }
+}
+
+// Create segment chart
+function createSegmentChart(canvas, rfquResults) {
+    const ctx = canvas.getContext('2d');
+    const stats = rfquResults.cluster_stats;
+    
+    let labels, data;
+    if (Array.isArray(stats)) {
+        labels = stats.map(clusterData => clusterData.segment);
+        data = stats.map(clusterData => clusterData.count);
+    } else {
+        labels = Object.keys(stats).map(cluster => stats[cluster].segment);
+        data = Object.keys(stats).map(cluster => stats[cluster].count);
+    }
+    const colors = [
+        'rgba(59, 130, 246, 0.8)',
+        'rgba(16, 185, 129, 0.8)',
+        'rgba(245, 158, 11, 0.8)',
+        'rgba(239, 68, 68, 0.8)',
+        'rgba(139, 92, 246, 0.8)'
+    ];
+    
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors.slice(0, labels.length),
+                borderWidth: 2,
+                borderColor: 'white'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+// Create distribution chart
+function createDistributionChart(canvas, data, label, color) {
+    const ctx = canvas.getContext('2d');
+    
+    // Create histogram bins
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const binCount = 10;
+    const binSize = (max - min) / binCount;
+    
+    const bins = new Array(binCount).fill(0);
+    data.forEach(value => {
+        const binIndex = Math.min(Math.floor((value - min) / binSize), binCount - 1);
+        bins[binIndex]++;
+    });
+    
+    const labels = bins.map((_, i) => {
+        const start = min + i * binSize;
+        const end = min + (i + 1) * binSize;
+        return `${start.toFixed(0)}-${end.toFixed(0)}`;
+    });
+    
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: label,
+                data: bins,
+                backgroundColor: color,
+                borderColor: color.replace('0.8', '1'),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
                 }
             }
         }

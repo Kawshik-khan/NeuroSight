@@ -18,7 +18,7 @@
             <div id="dataset-stats" class="space-y-2">
                 <p>Total Records: <span id="total-records" class="font-medium">-</span></p>
                 <p>Features: <span id="total-features" class="font-medium">-</span></p>
-                <p>Target: <span id="target-variable" class="font-medium">-</span></p>
+                <p id="target-label">Target: <span id="target-variable" class="font-medium">-</span></p>
             </div>
         </div>
         
@@ -30,13 +30,18 @@
             </div>
         </div>
         
-        <!-- Model Performance Card -->
+        <!-- Analysis Results Card -->
         <div class="bg-white rounded-lg shadow-lg p-6">
-            <h2 class="text-xl font-semibold mb-4">Model Performance</h2>
+            <h2 class="text-xl font-semibold mb-4" id="results-title">Model Performance</h2>
             <div id="model-metrics" class="space-y-2">
                 <p>Best Model: <span id="best-model" class="font-medium">-</span></p>
                 <p>R² Score: <span id="r2-score" class="font-medium">-</span></p>
                 <p>RMSE: <span id="rmse-score" class="font-medium">-</span></p>
+            </div>
+            <div id="rfm-metrics" class="space-y-2 hidden">
+                <p>Total Customers: <span id="total-customers" class="font-medium">-</span></p>
+                <p>Segments: <span id="total-segments" class="font-medium">-</span></p>
+                <p>Analysis Type: <span id="analysis-type-display" class="font-medium">-</span></p>
             </div>
         </div>
     </div>
@@ -55,6 +60,64 @@
             <h2 class="text-xl font-semibold mb-4">Feature Importance</h2>
             <div class="aspect-square">
                 <canvas id="feature-importance-chart" width="400" height="400"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- RFQU Analysis Results -->
+    <div id="rfqu-results" class="mt-8 space-y-8 hidden">
+        <!-- Customer Segments -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-semibold mb-4">Customer Segments</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                <div id="segment-cards">
+                    <!-- Segment cards will be populated dynamically -->
+                </div>
+            </div>
+            <div class="h-80">
+                <canvas id="segment-chart" width="800" height="320"></canvas>
+            </div>
+        </div>
+        
+        <!-- RFQU Distribution -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-lg font-semibold mb-4">Recency Distribution</h3>
+                <div class="h-64">
+                    <canvas id="recency-chart" width="300" height="256"></canvas>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-lg font-semibold mb-4">Frequency Distribution</h3>
+                <div class="h-64">
+                    <canvas id="frequency-chart" width="300" height="256"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-lg font-semibold mb-4">Quantity Distribution</h3>
+                <div class="h-64">
+                    <canvas id="quantity-chart" width="300" height="256"></canvas>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-lg font-semibold mb-4">Unit Price Distribution</h3>
+                <div class="h-64">
+                    <canvas id="unitprice-chart" width="300" height="256"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-1 gap-6">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-lg font-semibold mb-4">Monetary Distribution</h3>
+                <div class="h-64">
+                    <canvas id="monetary-chart" width="300" height="256"></canvas>
+                </div>
             </div>
         </div>
     </div>

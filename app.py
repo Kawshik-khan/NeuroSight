@@ -25,6 +25,10 @@ def to_serializable(obj):
         return obj.item()
     if _np is not None and isinstance(obj, _np.ndarray):
         return obj.tolist()
+    if _pd is not None and isinstance(obj, _pd.DataFrame):
+        return obj.to_dict('records')
+    if _pd is not None and isinstance(obj, _pd.Series):
+        return obj.to_dict()
     if isinstance(obj, dict):
         return {str(k): to_serializable(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple, set)):
@@ -47,7 +51,7 @@ if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB limit
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB limit
 
 ALLOWED_EXTENSIONS = {'csv', 'xlsx'}
 
@@ -214,12 +218,12 @@ def upload_file():
         except Exception as e:
             print(f"Error processing file: {str(e)}")
             print(traceback.format_exc())
-            return {'error': f'Error processing file: {str(e)}'}, 500
+            return {'error': f'Error processing file: {str(e)}. Please ensure the file is a valid CSV or Excel file.'}, 500
             
     except Exception as e:
-        print(f"Unexpected error: {str(e)}")
+        print(f"Unexpected error in upload: {str(e)}")
         print(traceback.format_exc())
-        return {'error': 'An unexpected error occurred'}, 500
+        return {'error': f'An unexpected error occurred: {str(e)}'}, 500
 
 @app.route('/train', methods=['POST'])
 def train_model():
@@ -227,112 +231,211 @@ def train_model():
         # Get request data
         data = request.json
         if not data:
+            print("Error: No JSON data provided in training request")
             return jsonify({'error': 'No data provided'}), 400
-            
-        target_column = data.get('target')
-        if not target_column:
-            return jsonify({'error': 'No target variable specified'}), 400
-            
-        features = data.get('features', [])
-        if not features:
-            return jsonify({'error': 'No features specified'}), 400
-            
-        filename = data.get('filename')
-        if not filename:
-            return jsonify({'error': 'No file specified'}), 400
-
-        # Ensure target is not included in features
-        features = [f for f in features if f != target_column]
-        if not features:
-            return jsonify({'error': 'No valid features remain after removing target from features'}), 400
         
-        # Load and process the data
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        if not os.path.exists(filepath):
-            return jsonify({'error': 'File not found'}), 404
+        print(f"Received training request with data: {data}")
+        
+        # Validate required fields
+        if 'analysis_type' not in data:
+            print("Error: Missing analysis_type in training request")
+            return jsonify({'error': 'Missing analysis_type parameter'}), 400
             
-        try:
-            # Use robust loader that imputes and prepares data
-            df = ml_utils.load_and_clean_data(filepath)
-        except Exception as e:
-            return jsonify({'error': f'Error loading data: {str(e)}'}), 400
+        analysis_type = data.get('analysis_type', 'prediction')  # 'prediction' or 'rfqu'
         
-        # Validate columns
-        missing_columns = set([target_column] + features) - set(df.columns)
-        if missing_columns:
-            return jsonify({'error': f'Missing columns in dataset: {missing_columns}'}), 400
-        
-        # Train the model
-        try:
-            # Train multiple models and pick the best
-            results = ml_utils.train_models(df, target_column, features)
-        except ValueError as e:
-            return jsonify({'error': str(e)}), 400
-        except Exception as e:
-            return jsonify({'error': f'Error during training: {str(e)}'}), 500
-        
-        # Save the model
-        model_path = os.path.join(MODELS_FOLDER, 'model.joblib')
-        try:
-            best_model = results['best_model']
-            ml_utils.save_model(best_model, model_path)
-            # Persist the one-hot encoded feature names for consistent inference
-            features_path = os.path.join(MODELS_FOLDER, 'features.joblib')
-            joblib.dump(results['features'], features_path)
-
-            # Save dataset information for dashboard
+        if analysis_type == 'rfqu':
+            # RFQU Analysis
+            customer_id_col = data.get('customer_id_col')
+            date_col = data.get('date_col')
+            unitprice_col = data.get('unitprice_col')
+            quantity_col = data.get('quantity_col')
+            
+            if not all([customer_id_col, date_col, unitprice_col, quantity_col]):
+                return jsonify({'error': 'For RFQU analysis, customer_id_col, date_col, unitprice_col, and quantity_col are required'}), 400
+                
+            filename = data.get('filename')
+            if not filename:
+                return jsonify({'error': 'No file specified'}), 400
+            
+            # Load and process the data
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            if not os.path.exists(filepath):
+                return jsonify({'error': 'File not found'}), 404
+                
             try:
-                dataset_info = ml_utils.get_data_summary(df)
-                dataset_info['target_column'] = target_column
-                dataset_info['feature_columns'] = features
-                dataset_info_path = os.path.join(MODELS_FOLDER, 'dataset_info.joblib')
-                joblib.dump(dataset_info, dataset_info_path)
-            except Exception:
-                # Best-effort dataset info; ignore errors
-                pass
-
-            # Compute evaluation metrics for dashboard
+                # Use robust loader that imputes and prepares data
+                print(f"Loading and cleaning data from: {filepath}")
+                df = ml_utils.load_and_clean_data(filepath)
+                print(f"Data loaded successfully. Shape: {df.shape}")
+            except Exception as e:
+                print(f"Error loading data: {str(e)}")
+                print(traceback.format_exc())
+                return jsonify({'error': f'Error loading data: {str(e)}. Please ensure the file is not corrupted and contains valid data.'}), 400
+            
+            # Validate columns
+            missing_columns = set([customer_id_col, date_col, unitprice_col, quantity_col]) - set(df.columns)
+            if missing_columns:
+                return jsonify({'error': f'Missing columns in dataset: {missing_columns}'}), 400
+            
+            # Perform RFQU analysis
             try:
-                X = pd.get_dummies(df[features])
-                # Ensure columns align to training features
-                for col in results['features']:
-                    if col not in X.columns:
-                        X[col] = 0
-                X = X[results['features']]
-                y = df[target_column]
-                X_train, X_test, y_train, y_test = train_test_split(
-                    X, y, test_size=0.2, random_state=42
-                )
-                # Model is already fitted inside train_models; evaluate on test split
-                y_pred_test = best_model.predict(X_test)
-                test_mse = mean_squared_error(y_test, y_pred_test)
-                test_rmse = float(np.sqrt(test_mse))
-                test_r2 = float(r2_score(y_test, y_pred_test))
-                metrics_path = os.path.join(MODELS_FOLDER, 'metrics.joblib')
-                joblib.dump({
-                    'best_model_type': type(best_model).__name__,
-                    'test_r2': test_r2,
-                    'test_rmse': test_rmse
-                }, metrics_path)
-            except Exception:
-                # Best-effort metrics; ignore errors
-                pass
-        except Exception as e:
-            return jsonify({'error': f'Error saving model: {str(e)}'}), 500
-        
-        # Return results
-        return jsonify({
-            'success': True,
-            'message': 'Model trained successfully',
-            # Echo back simple summary (frontend currently ignores these)
-            'best_model_type': type(results['best_model']).__name__,
-            'features': results['features']
-        })
+                print(f"Starting RFQU analysis with columns: customer_id={customer_id_col}, date={date_col}, unitprice={unitprice_col}, quantity={quantity_col}")
+                rfqu_results = ml_utils.perform_rfqu_analysis(df, customer_id_col, date_col, unitprice_col, quantity_col)
+                print(f"RFQU analysis completed successfully. Found {len(rfqu_results['rfqu_data'])} customers and {len(rfqu_results['segment_names'])} segments")
+            except ValueError as e:
+                print(f"RFQU analysis ValueError: {str(e)}")
+                return jsonify({'error': str(e)}), 400
+            except Exception as e:
+                print(f"RFQU analysis unexpected error: {str(e)}")
+                print(traceback.format_exc())
+                return jsonify({'error': f'Error during RFQU analysis: {str(e)}'}), 500
+            
+            # Save RFQU results
+            rfqu_path = os.path.join(MODELS_FOLDER, 'rfqu_results.joblib')
+            try:
+                ml_utils.save_rfqu_model(rfqu_results, rfqu_path)
+                
+                # Save dataset information for dashboard
+                try:
+                    dataset_info = ml_utils.get_data_summary(df)
+                    dataset_info['analysis_type'] = 'rfqu'
+                    dataset_info['customer_id_col'] = customer_id_col
+                    dataset_info['date_col'] = date_col
+                    dataset_info['unitprice_col'] = unitprice_col
+                    dataset_info['quantity_col'] = quantity_col
+                    dataset_info_path = os.path.join(MODELS_FOLDER, 'dataset_info.joblib')
+                    joblib.dump(dataset_info, dataset_info_path)
+                except Exception:
+                    pass
+                    
+            except Exception as e:
+                return jsonify({'error': f'Error saving RFQU results: {str(e)}'}), 500
+            
+            # Return RFQU results
+            return jsonify({
+                'success': True,
+                'message': 'RFQU analysis completed successfully',
+                'analysis_type': 'rfqu',
+                'n_customers': len(rfqu_results['rfqu_data']),
+                'n_segments': len(rfqu_results['segment_names'])
+            })
+            
+        else:
+            # Prediction Model Training
+            target_column = data.get('target')
+            if not target_column:
+                return jsonify({'error': 'No target variable specified'}), 400
+                
+            features = data.get('features', [])
+            if not features:
+                return jsonify({'error': 'No features specified'}), 400
+                
+            filename = data.get('filename')
+            if not filename:
+                return jsonify({'error': 'No file specified'}), 400
+
+            # Ensure target is not included in features
+            features = [f for f in features if f != target_column]
+            if not features:
+                return jsonify({'error': 'No valid features remain after removing target from features'}), 400
+            
+            # Load and process the data
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            if not os.path.exists(filepath):
+                return jsonify({'error': 'File not found'}), 404
+                
+            try:
+                # Use robust loader that imputes and prepares data
+                print(f"Loading and cleaning data from: {filepath}")
+                df = ml_utils.load_and_clean_data(filepath)
+                print(f"Data loaded successfully. Shape: {df.shape}")
+            except Exception as e:
+                print(f"Error loading data: {str(e)}")
+                print(traceback.format_exc())
+                return jsonify({'error': f'Error loading data: {str(e)}. Please ensure the file is not corrupted and contains valid data.'}), 400
+            
+            # Validate columns
+            missing_columns = set([target_column] + features) - set(df.columns)
+            if missing_columns:
+                return jsonify({'error': f'Missing columns in dataset: {missing_columns}'}), 400
+            
+            # Train the model
+            try:
+                print(f"Starting model training with target: {target_column}, features: {features}")
+                # Train multiple models and pick the best
+                results = ml_utils.train_models(df, target_column, features)
+                print(f"Model training completed successfully. Best model: {type(results['best_model']).__name__}")
+            except ValueError as e:
+                print(f"Model training ValueError: {str(e)}")
+                return jsonify({'error': str(e)}), 400
+            except Exception as e:
+                print(f"Model training unexpected error: {str(e)}")
+                print(traceback.format_exc())
+                return jsonify({'error': f'Error during training: {str(e)}'}), 500
+            
+            # Save the model
+            model_path = os.path.join(MODELS_FOLDER, 'model.joblib')
+            try:
+                best_model = results['best_model']
+                ml_utils.save_model(best_model, model_path)
+                # Persist the one-hot encoded feature names for consistent inference
+                features_path = os.path.join(MODELS_FOLDER, 'features.joblib')
+                joblib.dump(results['features'], features_path)
+
+                # Save dataset information for dashboard
+                try:
+                    dataset_info = ml_utils.get_data_summary(df)
+                    dataset_info['analysis_type'] = 'prediction'
+                    dataset_info['target_column'] = target_column
+                    dataset_info['feature_columns'] = features
+                    dataset_info_path = os.path.join(MODELS_FOLDER, 'dataset_info.joblib')
+                    joblib.dump(dataset_info, dataset_info_path)
+                except Exception:
+                    # Best-effort dataset info; ignore errors
+                    pass
+
+                # Compute evaluation metrics for dashboard
+                try:
+                    X = pd.get_dummies(df[features])
+                    # Ensure columns align to training features
+                    for col in results['features']:
+                        if col not in X.columns:
+                            X[col] = 0
+                    X = X[results['features']]
+                    y = df[target_column]
+                    X_train, X_test, y_train, y_test = train_test_split(
+                        X, y, test_size=0.2, random_state=42
+                    )
+                    # Model is already fitted inside train_models; evaluate on test split
+                    y_pred_test = best_model.predict(X_test)
+                    test_mse = mean_squared_error(y_test, y_pred_test)
+                    test_rmse = float(np.sqrt(test_mse))
+                    test_r2 = float(r2_score(y_test, y_pred_test))
+                    metrics_path = os.path.join(MODELS_FOLDER, 'metrics.joblib')
+                    joblib.dump({
+                        'best_model_type': type(best_model).__name__,
+                        'test_r2': test_r2,
+                        'test_rmse': test_rmse
+                    }, metrics_path)
+                except Exception:
+                    # Best-effort metrics; ignore errors
+                    pass
+            except Exception as e:
+                return jsonify({'error': f'Error saving model: {str(e)}'}), 500
+            
+            # Return results
+            return jsonify({
+                'success': True,
+                'message': 'Model trained successfully',
+                'analysis_type': 'prediction',
+                'best_model_type': type(results['best_model']).__name__,
+                'features': results['features']
+            })
         
     except Exception as e:
         print(f"Unexpected error during training: {str(e)}")
         print(traceback.format_exc())
-        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+        return jsonify({'error': f'Unexpected error during training: {str(e)}'}), 500
 
 @app.route('/predict', methods=['POST'])
 def make_predictions():
@@ -454,8 +557,10 @@ def get_dataset_info():
     try:
         # Check if we have a trained model and features
         features_path = os.path.join(MODELS_FOLDER, 'features.joblib')
-        if not os.path.exists(features_path):
-            return jsonify({'error': 'No trained model found. Please train a model first.'}), 404
+        rfqu_path = os.path.join(MODELS_FOLDER, 'rfqu_results.joblib')
+        
+        if not os.path.exists(features_path) and not os.path.exists(rfqu_path):
+            return jsonify({'error': 'No trained model or RFQU analysis found. Please train a model or perform RFQU analysis first.'}), 404
         
         # Get the original dataset from session storage or try to reconstruct
         # For now, we'll need to store the dataset info during training
@@ -474,6 +579,36 @@ def get_dataset_info():
         
     except Exception as e:
         print(f"Unexpected error getting dataset info: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+
+@app.route('/rfqu-results')
+def get_rfqu_results():
+    try:
+        rfqu_path = os.path.join(MODELS_FOLDER, 'rfqu_results.joblib')
+        if not os.path.exists(rfqu_path):
+            return jsonify({'error': 'No RFQU analysis found. Please perform RFQU analysis first.'}), 404
+        
+        try:
+            rfqu_results = ml_utils.load_rfqu_model(rfqu_path)
+            print(f"Loaded RFQU results with keys: {list(rfqu_results.keys())}")
+            
+            # Ensure cluster_centers is properly converted
+            if 'cluster_centers' in rfqu_results:
+                rfqu_results['cluster_centers'] = rfqu_results['cluster_centers'].tolist()
+            
+            serialized_results = to_serializable(rfqu_results)
+            return jsonify({
+                'success': True,
+                'rfqu_results': serialized_results
+            })
+        except Exception as e:
+            print(f"Error loading RFQU results: {str(e)}")
+            print(traceback.format_exc())
+            return jsonify({'error': f'Error loading RFQU results: {str(e)}'}), 500
+        
+    except Exception as e:
+        print(f"Unexpected error getting RFQU results: {str(e)}")
         print(traceback.format_exc())
         return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 

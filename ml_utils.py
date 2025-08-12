@@ -10,7 +10,10 @@ except Exception:
     XGB_AVAILABLE = False
 from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.impute import SimpleImputer
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
 import joblib
+from datetime import datetime
 
 def read_csv_with_fallback(filepath):
     encodings_to_try = ['utf-8', 'utf-8-sig', 'cp1252', 'latin1']
@@ -172,3 +175,197 @@ def get_data_summary(df):
         summary['correlations'] = correlations
     
     return summary
+
+def fix_data_types(df):
+    """Fix data types for common columns that should be numeric or datetime"""
+    df_fixed = df.copy()
+    
+    # Common date columns that should be converted
+    date_columns = ['date', 'Date', 'DATE', 'order_date', 'Order_Date', 'ORDER_DATE', 
+                    'purchase_date', 'Purchase_Date', 'PURCHASE_DATE', 'transaction_date',
+                    'Transaction_Date', 'TRANSACTION_DATE', 'created_at', 'Created_At',
+                    'timestamp', 'Timestamp', 'TIMESTAMP']
+    
+    # Common numeric columns that might be strings
+    numeric_columns = ['amount', 'Amount', 'AMOUNT', 'price', 'Price', 'PRICE',
+                      'quantity', 'Quantity', 'QUANTITY', 'total', 'Total', 'TOTAL',
+                      'revenue', 'Revenue', 'REVENUE', 'sales', 'Sales', 'SALES',
+                      'cost', 'Cost', 'COST', 'profit', 'Profit', 'PROFIT']
+    
+    # Convert date columns
+    for col in df_fixed.columns:
+        if col.lower() in [d.lower() for d in date_columns]:
+            try:
+                df_fixed[col] = pd.to_datetime(df_fixed[col], errors='coerce')
+            except:
+                pass
+    
+    # Convert numeric columns
+    for col in df_fixed.columns:
+        if col.lower() in [n.lower() for n in numeric_columns]:
+            try:
+                df_fixed[col] = pd.to_numeric(df_fixed[col], errors='coerce')
+            except:
+                pass
+    
+    return df_fixed
+
+def perform_rfqu_analysis(df, customer_id_col, date_col, unitprice_col, quantity_col, n_clusters=3):
+    """
+    Perform RFQU (Recency, Frequency, Quantity, UnitPrice, Monetary) analysis with K-means clustering
+    """
+    # Validate required columns
+    required_cols = [customer_id_col, date_col, unitprice_col, quantity_col]
+    missing_cols = set(required_cols) - set(df.columns)
+    if missing_cols:
+        raise ValueError(f"Missing required columns: {missing_cols}")
+    
+    # Create a copy to avoid modifying original data
+    df_fixed = df.copy()
+    
+    # Convert date column to datetime
+    try:
+        df_fixed[date_col] = pd.to_datetime(df_fixed[date_col])
+    except Exception as e:
+        raise ValueError(f"Error converting {date_col} to datetime: {str(e)}")
+    
+    # Convert unitprice and quantity to numeric
+    try:
+        df_fixed[unitprice_col] = pd.to_numeric(df_fixed[unitprice_col], errors='coerce')
+        df_fixed[quantity_col] = pd.to_numeric(df_fixed[quantity_col], errors='coerce')
+    except Exception as e:
+        raise ValueError(f"Error converting {unitprice_col} or {quantity_col} to numeric: {str(e)}")
+    
+    # Remove rows with missing values in required columns
+    df_fixed = df_fixed.dropna(subset=[customer_id_col, date_col, unitprice_col, quantity_col])
+    
+    if df_fixed.empty:
+        raise ValueError("No valid data remaining after cleaning")
+    
+    # Calculate RFQU metrics
+    current_date = df_fixed[date_col].max()
+    
+    # Calculate monetary value for each transaction first
+    df_fixed['monetary'] = df_fixed[quantity_col] * df_fixed[unitprice_col]
+    
+    rfqu = df_fixed.groupby(customer_id_col).agg({
+        date_col: lambda x: (current_date - x.max()).days,  # Recency
+        customer_id_col: 'nunique',  # Frequency
+        quantity_col: 'sum',  # Total Quantity
+        unitprice_col: 'mean',  # Average Unit Price
+        'monetary': 'sum'  # Total Monetary Value
+    }).rename(columns={
+        date_col: 'recency',
+        customer_id_col: 'frequency',
+        quantity_col: 'quantity',
+        unitprice_col: 'unitprice'
+    })
+    
+    # Calculate RFQU scores (1-5 scale, 5 being best)
+    # Use tie-safe ranking before qcut to avoid duplicate bin edges
+    def _quantile_score(values: pd.Series, higher_is_better: bool) -> pd.Series:
+        ranked = values.rank(method='first', ascending=True)
+        unique_ranks = ranked.nunique()
+        bins = int(min(5, unique_ranks))
+        if bins < 2:
+            # Not enough variation; assign neutral score
+            return pd.Series(np.full(len(ranked), 3, dtype=int), index=ranked.index)
+        labels = list(range(1, bins + 1)) if higher_is_better else list(range(bins, 0, -1))
+        return pd.qcut(ranked, q=bins, labels=labels)
+
+    rfqu['r_score'] = _quantile_score(rfqu['recency'], higher_is_better=False)
+    rfqu['f_score'] = _quantile_score(rfqu['frequency'], higher_is_better=True)
+    rfqu['q_score'] = _quantile_score(rfqu['quantity'], higher_is_better=True)
+    rfqu['u_score'] = _quantile_score(rfqu['unitprice'], higher_is_better=True)
+    rfqu['m_score'] = _quantile_score(rfqu['monetary'], higher_is_better=True) # Add Monetary score
+    
+    # Convert scores to numeric
+    rfqu['r_score'] = pd.to_numeric(rfqu['r_score'])
+    rfqu['f_score'] = pd.to_numeric(rfqu['f_score'])
+    rfqu['q_score'] = pd.to_numeric(rfqu['q_score'])
+    rfqu['u_score'] = pd.to_numeric(rfqu['u_score'])
+    rfqu['m_score'] = pd.to_numeric(rfqu['m_score']) # Convert Monetary score
+    
+    # Prepare data for clustering
+    rfqu_features = rfqu[['r_score', 'f_score', 'q_score', 'u_score', 'm_score']].values
+    
+    # Scale the features
+    scaler = StandardScaler()
+    rfqu_scaled = scaler.fit_transform(rfqu_features)
+    
+    # Perform K-means clustering
+    try:
+        print(f"Using {n_clusters} clusters for K-means clustering")
+        kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+        cluster_labels = kmeans.fit_predict(rfqu_scaled)
+        print(f"K-means clustering completed with {len(np.unique(cluster_labels))} unique clusters")
+    except Exception as e:
+        raise ValueError(f"K-means clustering failed: {str(e)}. Try reducing the number of clusters or check your data.")
+    
+    # Add cluster labels to RFQU dataframe
+    rfqu['cluster'] = cluster_labels
+    
+    # Create segment names based on cluster characteristics
+    segment_names = []
+    for i in range(n_clusters):
+        cluster_data = rfqu[rfqu['cluster'] == i]
+        avg_r = cluster_data['r_score'].mean()
+        avg_f = cluster_data['f_score'].mean()
+        avg_m = cluster_data['m_score'].mean()
+        
+        # Simple 3-segment logic for RFQU analysis
+        if avg_r >= 4 and avg_f >= 3:
+            # High recency (recent) and good frequency
+            segment = "Active Customers"
+        elif avg_r >= 3 and avg_f >= 3:
+            # Medium recency and frequency
+            segment = "Regular Customers"
+        else:
+            # Low recency or frequency
+            segment = "At Risk Customers"
+        
+        segment_names.append(segment)
+    
+    # Map segment names to clusters
+    rfqu['segment'] = rfqu['cluster'].map(dict(enumerate(segment_names)))
+    
+    # Calculate cluster statistics
+    cluster_stats = rfqu.groupby('cluster').agg({
+        'recency': 'mean',
+        'frequency': 'mean',
+        'quantity': 'mean',
+        'unitprice': 'mean',
+        'monetary': 'mean', # Add Monetary to stats
+        'r_score': 'mean',
+        'f_score': 'mean',
+        'q_score': 'mean',
+        'u_score': 'mean',
+        'm_score': 'mean' # Add Monetary to stats
+    }).round(2)
+    
+    cluster_stats['segment'] = segment_names
+    cluster_stats['count'] = rfqu.groupby('cluster').size()
+    
+    return {
+        'rfqu_data': rfqu,
+        'cluster_stats': cluster_stats,
+        'cluster_centers': kmeans.cluster_centers_,
+        'segment_names': segment_names,
+        'scaler': scaler,
+        'kmeans_model': kmeans
+    }
+
+def save_rfqu_model(rfqu_results, filepath):
+    """Save RFQU analysis results and model"""
+    # Remove non-serializable objects before saving
+    rfqu_data = rfqu_results.copy()
+    if 'scaler' in rfqu_data:
+        del rfqu_data['scaler']
+    if 'kmeans_model' in rfqu_data:
+        del rfqu_data['kmeans_model']
+    
+    joblib.dump(rfqu_data, filepath)
+
+def load_rfqu_model(filepath):
+    """Load RFQU analysis results"""
+    return joblib.load(filepath)

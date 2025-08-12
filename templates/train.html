@@ -28,38 +28,86 @@
         </div>
         
         <form id="training-form" class="space-y-6">
+            <!-- Analysis Type Selection -->
             <div>
-                <label for="target-column" class="block text-gray-700 font-medium mb-2">Select Target Variable</label>
-                <select id="target-column" class="w-full border rounded-lg px-4 py-2 bg-white">
-                    <option value="">Select a column...</option>
+                <label for="analysis-type" class="block text-gray-700 font-medium mb-2">Analysis Type</label>
+                <select id="analysis-type" class="w-full border rounded-lg px-4 py-2 bg-white">
+                    <option value="prediction">Prediction Model</option>
+                    <option value="rfqu">RFQU Customer Segmentation</option>
                 </select>
-                <p class="mt-1 text-sm text-gray-500">Choose the variable you want to predict</p>
+                                    <p class="mt-1 text-sm text-gray-500">Choose between prediction model training or RFQU customer segmentation analysis</p>
             </div>
             
-            <div>
-                <label class="block text-gray-700 font-medium mb-2">Select Features</label>
-                <div id="feature-list" class="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-4">
-                    <!-- Features will be populated dynamically -->
+            <!-- Prediction Model Fields -->
+            <div id="prediction-fields" class="space-y-6">
+                <div>
+                    <label for="target-column" class="block text-gray-700 font-medium mb-2">Select Target Variable</label>
+                    <select id="target-column" class="w-full border rounded-lg px-4 py-2 bg-white">
+                        <option value="">Select a column...</option>
+                    </select>
+                    <p class="mt-1 text-sm text-gray-500">Choose the variable you want to predict</p>
                 </div>
                 
-                <div class="mt-2 flex items-center space-x-4">
-                    <button type="button" id="select-all" class="text-blue-600 text-sm hover:text-blue-800 flex items-center">
-                        <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
-                        </svg>
-                        Select All
-                    </button>
-                    <button type="button" id="deselect-all" class="text-blue-600 text-sm hover:text-blue-800 flex items-center">
-                        <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                        Deselect All
-                    </button>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Select Features</label>
+                    <div id="feature-list" class="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-4">
+                        <!-- Features will be populated dynamically -->
+                    </div>
+                    
+                    <div class="mt-2 flex items-center space-x-4">
+                        <button type="button" id="select-all" class="text-blue-600 text-sm hover:text-blue-800 flex items-center">
+                            <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
+                            </svg>
+                            Select All
+                        </button>
+                        <button type="button" id="deselect-all" class="text-blue-600 text-sm hover:text-blue-800 flex items-center">
+                            <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            Deselect All
+                        </button>
+                    </div>
                 </div>
             </div>
             
+            <!-- RFM Analysis Fields -->
+            <div id="rfm-fields" class="space-y-6 hidden">
+                <div>
+                    <label for="customer-id-col" class="block text-gray-700 font-medium mb-2">Customer ID Column</label>
+                    <select id="customer-id-col" class="w-full border rounded-lg px-4 py-2 bg-white">
+                        <option value="">Select a column...</option>
+                    </select>
+                    <p class="mt-1 text-sm text-gray-500">Column containing unique customer identifiers</p>
+                </div>
+                
+                               <div>
+                   <label for="date-col" class="block text-gray-700 font-medium mb-2">Transaction Date Column</label>
+                   <select id="date-col" class="w-full border rounded-lg px-4 py-2 bg-white">
+                       <option value="">Select a column...</option>
+                   </select>
+                   <p class="mt-1 text-sm text-gray-500">Column containing transaction dates</p>
+               </div>
+               
+               <div>
+                   <label for="unitprice-col" class="block text-gray-700 font-medium mb-2">Unit Price Column</label>
+                   <select id="unitprice-col" class="w-full border rounded-lg px-4 py-2 bg-white">
+                       <option value="">Select a column...</option>
+                   </select>
+                   <p class="mt-1 text-sm text-gray-500">Column containing unit prices</p>
+               </div>
+               
+               <div>
+                   <label for="quantity-col" class="block text-gray-700 font-medium mb-2">Quantity Column</label>
+                   <select id="quantity-col" class="w-full border rounded-lg px-4 py-2 bg-white">
+                       <option value="">Select a column...</option>
+                   </select>
+                   <p class="mt-1 text-sm text-gray-500">Column containing quantities</p>
+               </div>
+           </div>
+            
             <button type="submit" id="train-button" class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-200 flex items-center justify-center space-x-2">
-                <span id="button-text">Train Models</span>
+                <span id="button-text">Start Analysis</span>
                 <svg id="loading-spinner" class="animate-spin h-5 w-5 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
