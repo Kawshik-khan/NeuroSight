@@ -351,6 +351,7 @@ function initializeDashboard() {
     const rmseEl = document.getElementById('rmse-score');
     const featChartCanvas = document.getElementById('feature-importance-chart');
 
+    // Load model metrics
     fetch('/metrics')
         .then(async (res) => {
             const data = await res.json();
@@ -394,4 +395,174 @@ function initializeDashboard() {
         .catch((err) => {
             showError(err.message || 'Failed to load dashboard metrics');
         });
+
+    // Load dataset information
+    fetch('/dataset-info')
+        .then(async (res) => {
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to load dataset info');
+
+            const datasetInfo = data.dataset_info;
+            
+            // Update dataset overview
+            const totalRecordsEl = document.getElementById('total-records');
+            const totalFeaturesEl = document.getElementById('total-features');
+            const targetVariableEl = document.getElementById('target-variable');
+            
+            if (totalRecordsEl) totalRecordsEl.textContent = datasetInfo.n_rows || '-';
+            if (totalFeaturesEl) totalFeaturesEl.textContent = datasetInfo.n_columns || '-';
+            if (targetVariableEl) targetVariableEl.textContent = datasetInfo.target_column || '-';
+
+            // Update missing values
+            const missingValuesEl = document.getElementById('missing-values');
+            if (missingValuesEl && datasetInfo.missing_values) {
+                const missingHtml = Object.entries(datasetInfo.missing_values)
+                    .filter(([col, count]) => count > 0)
+                    .map(([col, count]) => `<p>${col}: <span class="font-medium">${count}</span></p>`)
+                    .join('');
+                missingValuesEl.innerHTML = missingHtml || '<p>No missing values</p>';
+            }
+
+            // Create correlation heatmap
+            const correlationCanvas = document.getElementById('correlation-heatmap');
+            if (correlationCanvas && datasetInfo.correlations) {
+                createCorrelationHeatmap(correlationCanvas, datasetInfo.correlations);
+            }
+
+            // Create prediction trend chart (placeholder for now)
+            const predictionTrendCanvas = document.getElementById('prediction-trend');
+            if (predictionTrendCanvas) {
+                createPredictionTrendChart(predictionTrendCanvas);
+            }
+        })
+        .catch((err) => {
+            console.warn('Failed to load dataset info:', err.message);
+        });
+}
+
+// Create correlation heatmap
+function createCorrelationHeatmap(canvas, correlations) {
+    const ctx = canvas.getContext('2d');
+    const labels = Object.keys(correlations);
+    
+    // Create a matrix of correlation values
+    const correlationMatrix = labels.map(label1 => 
+        labels.map(label2 => correlations[label1]?.[label2] || 0)
+    );
+
+    // Create a custom heatmap using rectangles
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+    const cellWidth = canvasWidth / labels.length;
+    const cellHeight = canvasHeight / labels.length;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+    // Draw correlation matrix
+    correlationMatrix.forEach((row, i) => {
+        row.forEach((value, j) => {
+            const x = j * cellWidth;
+            const y = i * cellHeight;
+            
+            // Color based on correlation value
+            let color;
+            if (value >= 0) {
+                // Positive correlation - blue
+                const intensity = Math.abs(value);
+                color = `rgba(59, 130, 246, ${intensity})`;
+            } else {
+                // Negative correlation - red
+                const intensity = Math.abs(value);
+                color = `rgba(239, 68, 68, ${intensity})`;
+            }
+            
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, cellWidth, cellHeight);
+            
+            // Add border
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x, y, cellWidth, cellHeight);
+            
+            // Add correlation value text
+            ctx.fillStyle = 'white';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(value.toFixed(2), x + cellWidth/2, y + cellHeight/2);
+        });
+    });
+
+    // Add axis labels
+    ctx.fillStyle = 'black';
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'center';
+    
+    // X-axis labels
+    labels.forEach((label, i) => {
+        const x = i * cellWidth + cellWidth / 2;
+        const y = canvasHeight + 20;
+        ctx.fillText(label, x, y);
+    });
+    
+    // Y-axis labels
+    ctx.save();
+    ctx.translate(0, canvasHeight);
+    ctx.rotate(-Math.PI / 2);
+    labels.forEach((label, i) => {
+        const x = -(i * cellHeight + cellHeight / 2);
+        const y = -20;
+        ctx.fillText(label, x, y);
+    });
+    ctx.restore();
+}
+
+// Create prediction trend chart
+function createPredictionTrendChart(canvas) {
+    const ctx = canvas.getContext('2d');
+    
+    // This is a placeholder chart - in a real implementation, you would
+    // load actual prediction data from the model
+    const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    const actualData = [120, 190, 300, 500, 200, 300];
+    const predictedData = [110, 180, 290, 480, 210, 320];
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Actual',
+                    data: actualData,
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4
+                },
+                {
+                    label: 'Predicted',
+                    data: predictedData,
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    tension: 0.4,
+                    borderDash: [5, 5]
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
 }

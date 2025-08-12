@@ -9,18 +9,19 @@
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
-<body class="bg-gray-100">
-    <nav class="bg-blue-600 text-white shadow-lg">
+<body class="min-h-screen bg-gradient-to-br from-sky-100 via-rose-100 to-violet-100">
+    <nav class="text-white backdrop-blur supports-[backdrop-filter]:backdrop-blur bg-white/20 border-b border-white/30 shadow-sm">
         <div class="container mx-auto px-6 py-4">
             <div class="flex items-center justify-between">
-                <div class="text-xl font-bold">
+                <div class="text-xl font-bold text-slate-900">
                     <a href="/">NuroSight</a>
                 </div>
                 <div class="space-x-4">
-                    <a href="/" class="hover:text-blue-200">Home</a>
-                    <a href="/train" class="hover:text-blue-200">Train Model</a>
-                    <a href="/predict" class="hover:text-blue-200">Predict</a>
-                    <a href="/dashboard" class="hover:text-blue-200">Dashboard</a>
+                    <a href="/" class="text-slate-800 hover:text-slate-900">Home</a>
+                    <a href="/home" class="text-slate-800 hover:text-slate-900">Upload</a>
+                    <a href="/train" class="text-slate-800 hover:text-slate-900">Train Model</a>
+                    <a href="/predict" class="text-slate-800 hover:text-slate-900">Predict</a>
+                    <a href="/dashboard" class="text-slate-800 hover:text-slate-900">Dashboard</a>
                 </div>
             </div>
         </div>
@@ -30,11 +31,11 @@
         {% block content %}{% endblock %}
     </main>
 
-    <div id="loading-spinner" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+    <div id="loading-spinner" class="fixed inset-0 bg-black/20 flex items-center justify-center hidden backdrop-blur">
         <div class="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
     </div>
 
-    <div id="error-toast" class="fixed bottom-4 right-4 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg hidden">
+    <div id="error-toast" class="fixed bottom-4 right-4 bg-white/80 backdrop-blur text-red-700 px-6 py-4 rounded-lg shadow-lg hidden border border-red-200">
         <span id="error-message"></span>
     </div>
 </body>

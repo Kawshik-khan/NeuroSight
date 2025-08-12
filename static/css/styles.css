@@ -1,3 +1,12 @@
+/* Glassmorphism helper */
+.glass {
+  background: rgba(255, 255, 255, 0.6);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+}
 /* Custom styles beyond Tailwind */
 
 /* Loading spinner animation */

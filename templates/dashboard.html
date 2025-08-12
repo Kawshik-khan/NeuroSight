@@ -4,6 +4,11 @@
 
 {% block content %}
 <div class="max-w-6xl mx-auto">
+    <!-- Error Message -->
+    <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+        <span id="error-text"></span>
+    </div>
+    
     <h1 class="text-3xl font-bold mb-8">Analytics Dashboard</h1>
     
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -41,7 +46,7 @@
         <div class="bg-white rounded-lg shadow-lg p-6">
             <h2 class="text-xl font-semibold mb-4">Correlation Heatmap</h2>
             <div class="aspect-square">
-                <canvas id="correlation-heatmap"></canvas>
+                <canvas id="correlation-heatmap" width="400" height="400"></canvas>
             </div>
         </div>
         
@@ -49,7 +54,7 @@
         <div class="bg-white rounded-lg shadow-lg p-6">
             <h2 class="text-xl font-semibold mb-4">Feature Importance</h2>
             <div class="aspect-square">
-                <canvas id="feature-importance-chart"></canvas>
+                <canvas id="feature-importance-chart" width="400" height="400"></canvas>
             </div>
         </div>
     </div>
@@ -58,7 +63,7 @@
     <div class="mt-8 bg-white rounded-lg shadow-lg p-6">
         <h2 class="text-xl font-semibold mb-4">Prediction Trend</h2>
         <div class="h-80">
-            <canvas id="prediction-trend"></canvas>
+            <canvas id="prediction-trend" width="800" height="320"></canvas>
         </div>
     </div>
 </div>

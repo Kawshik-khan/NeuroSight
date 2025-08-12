@@ -147,6 +147,10 @@ def make_prediction(model_info, df):
 
 @app.route('/')
 def home():
+    return render_template('landing.html')
+
+@app.route('/home')
+def upload_home():
     return render_template('home.html')
 
 @app.route('/train')
@@ -275,6 +279,17 @@ def train_model():
             # Persist the one-hot encoded feature names for consistent inference
             features_path = os.path.join(MODELS_FOLDER, 'features.joblib')
             joblib.dump(results['features'], features_path)
+
+            # Save dataset information for dashboard
+            try:
+                dataset_info = ml_utils.get_data_summary(df)
+                dataset_info['target_column'] = target_column
+                dataset_info['feature_columns'] = features
+                dataset_info_path = os.path.join(MODELS_FOLDER, 'dataset_info.joblib')
+                joblib.dump(dataset_info, dataset_info_path)
+            except Exception:
+                # Best-effort dataset info; ignore errors
+                pass
 
             # Compute evaluation metrics for dashboard
             try:
@@ -431,6 +446,34 @@ def get_metrics():
         
     except Exception as e:
         print(f"Unexpected error getting metrics: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+
+@app.route('/dataset-info')
+def get_dataset_info():
+    try:
+        # Check if we have a trained model and features
+        features_path = os.path.join(MODELS_FOLDER, 'features.joblib')
+        if not os.path.exists(features_path):
+            return jsonify({'error': 'No trained model found. Please train a model first.'}), 404
+        
+        # Get the original dataset from session storage or try to reconstruct
+        # For now, we'll need to store the dataset info during training
+        dataset_info_path = os.path.join(MODELS_FOLDER, 'dataset_info.joblib')
+        if os.path.exists(dataset_info_path):
+            try:
+                dataset_info = joblib.load(dataset_info_path)
+                return jsonify(to_serializable({
+                    'success': True,
+                    'dataset_info': dataset_info
+                }))
+            except Exception:
+                pass
+        
+        return jsonify({'error': 'Dataset information not available. Please retrain the model.'}), 404
+        
+    except Exception as e:
+        print(f"Unexpected error getting dataset info: {str(e)}")
         print(traceback.format_exc())
         return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 
