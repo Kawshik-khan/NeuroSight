@@ -1,0 +1,541 @@
+/* Animated Background for NeuroSight */
+.animated-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(135deg, 
+        #f8f6f3 0%, 
+        #f2ede8 20%, 
+        #f0e8ff 40%, 
+        #ede5ff 60%, 
+        #e6d9ff 80%, 
+        #dcc9ff 100%);
+    overflow: hidden;
+    z-index: -1;
+}
+
+/* Grid overlay */
+.grid-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        linear-gradient(rgba(139, 92, 246, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(139, 92, 246, 0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+    animation: gridMove 20s linear infinite;
+}
+
+/* Floating geometric shapes */
+.shape {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.shape-1 {
+    width: 150px;
+    height: 150px;
+    top: 10%;
+    left: 15%;
+    animation: float1 8s ease-in-out infinite;
+}
+
+.shape-2 {
+    width: 100px;
+    height: 100px;
+    top: 20%;
+    right: 20%;
+    animation: float2 10s ease-in-out infinite;
+    animation-delay: 2s;
+}
+
+.shape-3 {
+    width: 80px;
+    height: 80px;
+    bottom: 30%;
+    left: 10%;
+    animation: float3 12s ease-in-out infinite;
+    animation-delay: 4s;
+}
+
+.shape-4 {
+    width: 120px;
+    height: 120px;
+    bottom: 20%;
+    right: 15%;
+    animation: float4 9s ease-in-out infinite;
+    animation-delay: 1s;
+}
+
+.shape-5 {
+    width: 60px;
+    height: 60px;
+    top: 50%;
+    left: 5%;
+    animation: float5 15s ease-in-out infinite;
+    animation-delay: 3s;
+}
+
+.shape-6 {
+    width: 90px;
+    height: 90px;
+    top: 60%;
+    right: 5%;
+    animation: float6 11s ease-in-out infinite;
+    animation-delay: 5s;
+}
+
+/* Gradient orbs */
+.orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.3;
+}
+
+.orb-1 {
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, #8b5cf6, transparent);
+    top: -150px;
+    left: -150px;
+    animation: orbFloat1 20s ease-in-out infinite;
+}
+
+.orb-2 {
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, #a855f7, transparent);
+    bottom: -200px;
+    right: -200px;
+    animation: orbFloat2 25s ease-in-out infinite;
+}
+
+.orb-3 {
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, #c084fc, transparent);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: orbFloat3 18s ease-in-out infinite;
+}
+
+/* Plus signs */
+.plus {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    opacity: 0.1;
+}
+
+.plus::before,
+.plus::after {
+    content: '';
+    position: absolute;
+    background: #8b5cf6;
+}
+
+.plus::before {
+    width: 20px;
+    height: 2px;
+    top: 9px;
+    left: 0;
+}
+
+.plus::after {
+    width: 2px;
+    height: 20px;
+    top: 0;
+    left: 9px;
+}
+
+.plus-1 {
+    top: 25%;
+    left: 25%;
+    animation: plusFloat 8s ease-in-out infinite;
+}
+
+.plus-2 {
+    top: 15%;
+    right: 30%;
+    animation: plusFloat 10s ease-in-out infinite;
+    animation-delay: 2s;
+}
+
+.plus-3 {
+    bottom: 25%;
+    left: 20%;
+    animation: plusFloat 12s ease-in-out infinite;
+    animation-delay: 4s;
+}
+
+.plus-4 {
+    bottom: 40%;
+    right: 25%;
+    animation: plusFloat 9s ease-in-out infinite;
+    animation-delay: 1s;
+}
+
+.plus-5 {
+    top: 60%;
+    left: 60%;
+    animation: plusFloat 11s ease-in-out infinite;
+    animation-delay: 3s;
+}
+
+/* Subtle particles */
+.particle {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    background: rgba(139, 92, 246, 0.3);
+    border-radius: 50%;
+    animation: particleFloat 15s linear infinite;
+}
+
+.particle:nth-child(1) {
+    left: 20%;
+    animation-delay: 0s;
+}
+
+.particle:nth-child(2) {
+    left: 40%;
+    animation-delay: 2s;
+}
+
+.particle:nth-child(3) {
+    left: 60%;
+    animation-delay: 4s;
+}
+
+.particle:nth-child(4) {
+    left: 80%;
+    animation-delay: 6s;
+}
+
+/* Technology Cards */
+.tech-card {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(15px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    /*font-size: 10px;*/
+    /*font-weight: 600;*/
+    color: rgba(139, 92, 246, 0.8);
+    text-align: center;
+    line-height: 1.2;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    padding: 8px;
+}
+
+.tech-card img {
+    width: 140px;
+    height: 140px;
+    object-fit: contain;
+    margin-bottom: 4px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    transition: transform 0.3s ease;
+}
+
+.tech-card:hover img {
+    transform: scale(1.1);
+}
+
+.tech-card:hover {
+    transform: scale(1.1);
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(139, 92, 246, 0.5);
+    box-shadow: 0 12px 40px rgba(139, 92, 246, 0.2);
+}
+
+.tech-card-1 {
+    top: 15%;
+    left: 8%;
+    animation: techFloat1 25s ease-in-out infinite;
+}
+
+.tech-card-2 {
+    top: 25%;
+    right: 10%;
+    animation: techFloat2 30s ease-in-out infinite;
+    animation-delay: 3s;
+}
+
+.tech-card-3 {
+    bottom: 25%;
+    left: 12%;
+    animation: techFloat3 28s ease-in-out infinite;
+    animation-delay: 6s;
+}
+
+.tech-card-4 {
+    bottom: 15%;
+    right: 8%;
+    animation: techFloat4 32s ease-in-out infinite;
+    animation-delay: 9s;
+}
+
+.tech-card-5 {
+    top: 45%;
+    left: 3%;
+    animation: techFloat5 27s ease-in-out infinite;
+    animation-delay: 12s;
+}
+
+.tech-card-6 {
+    top: 55%;
+    right: 3%;
+    animation: techFloat6 29s ease-in-out infinite;
+    animation-delay: 15s;
+}
+
+/* Animations */
+@keyframes gridMove {
+    0% {
+        transform: translate(0, 0);
+    }
+    100% {
+        transform: translate(50px, 50px);
+    }
+}
+
+@keyframes float1 {
+    0%, 100% {
+        transform: translateY(0px) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-30px) rotate(180deg);
+    }
+}
+
+@keyframes float2 {
+    0%, 100% {
+        transform: translateY(0px) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-25px) rotate(-180deg);
+    }
+}
+
+@keyframes float3 {
+    0%, 100% {
+        transform: translateY(0px) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-20px) rotate(360deg);
+    }
+}
+
+@keyframes float4 {
+    0%, 100% {
+        transform: translateY(0px) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-35px) rotate(-360deg);
+    }
+}
+
+@keyframes float5 {
+    0%, 100% {
+        transform: translateY(0px) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-15px) rotate(270deg);
+    }
+}
+
+@keyframes float6 {
+    0%, 100% {
+        transform: translateY(0px) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-28px) rotate(-270deg);
+    }
+}
+
+@keyframes orbFloat1 {
+    0%, 100% {
+        transform: translate(0, 0) scale(1);
+    }
+    50% {
+        transform: translate(100px, 50px) scale(1.1);
+    }
+}
+
+@keyframes orbFloat2 {
+    0%, 100% {
+        transform: translate(0, 0) scale(1);
+    }
+    50% {
+        transform: translate(-80px, -60px) scale(0.9);
+    }
+}
+
+@keyframes orbFloat3 {
+    0%, 100% {
+        transform: translate(-50%, -50%) scale(1);
+    }
+    50% {
+        transform: translate(-50%, -50%) translate(40px, -30px) scale(1.2);
+    }
+}
+
+@keyframes plusFloat {
+    0%, 100% {
+        transform: translateY(0px) rotate(0deg);
+        opacity: 0.1;
+    }
+    50% {
+        transform: translateY(-20px) rotate(45deg);
+        opacity: 0.2;
+    }
+}
+
+@keyframes particleFloat {
+    0% {
+        transform: translateY(100vh) scale(0);
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-10vh) scale(1);
+        opacity: 0;
+    }
+}
+
+/* Technology Card Animations */
+@keyframes techFloat1 {
+    0%, 100% {
+        transform: translate(0, 0) rotate(0deg);
+    }
+    25% {
+        transform: translate(30px, -20px) rotate(5deg);
+    }
+    50% {
+        transform: translate(10px, -40px) rotate(-3deg);
+    }
+    75% {
+        transform: translate(-20px, -10px) rotate(8deg);
+    }
+}
+
+@keyframes techFloat2 {
+    0%, 100% {
+        transform: translate(0, 0) rotate(0deg);
+    }
+    25% {
+        transform: translate(-25px, -30px) rotate(-7deg);
+    }
+    50% {
+        transform: translate(-40px, -15px) rotate(4deg);
+    }
+    75% {
+        transform: translate(-15px, -25px) rotate(-2deg);
+    }
+}
+
+@keyframes techFloat3 {
+    0%, 100% {
+        transform: translate(0, 0) rotate(0deg);
+    }
+    25% {
+        transform: translate(35px, -15px) rotate(6deg);
+    }
+    50% {
+        transform: translate(20px, -35px) rotate(-4deg);
+    }
+    75% {
+        transform: translate(-10px, -20px) rotate(3deg);
+    }
+}
+
+@keyframes techFloat4 {
+    0%, 100% {
+        transform: translate(0, 0) rotate(0deg);
+    }
+    25% {
+        transform: translate(-30px, -25px) rotate(-5deg);
+    }
+    50% {
+        transform: translate(-45px, -10px) rotate(7deg);
+    }
+    75% {
+        transform: translate(-20px, -30px) rotate(-3deg);
+    }
+}
+
+@keyframes techFloat5 {
+    0%, 100% {
+        transform: translate(0, 0) rotate(0deg);
+    }
+    25% {
+        transform: translate(25px, -20px) rotate(4deg);
+    }
+    50% {
+        transform: translate(15px, -35px) rotate(-6deg);
+    }
+    75% {
+        transform: translate(-15px, -15px) rotate(2deg);
+    }
+}
+
+@keyframes techFloat6 {
+    0%, 100% {
+        transform: translate(0, 0) rotate(0deg);
+    }
+    25% {
+        transform: translate(-20px, -25px) rotate(-3deg);
+    }
+    50% {
+        transform: translate(-35px, -20px) rotate(5deg);
+    }
+    75% {
+        transform: translate(-10px, -30px) rotate(-4deg);
+    }
+}
+
+/* Ensure content is above the background */
+.content-wrapper {
+    position: relative;
+    z-index: 1;
+}
+
+/* Enhanced glassmorphism for better contrast with animated background */
+.glass-enhanced {
+    background: rgba(255, 255, 255, 0);
+    -webkit-backdrop-filter: blur(15px);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    border-radius: 20px;
+}
+
+/* Enhanced navigation for better visibility */
+.nav-enhanced {
+    background: rgba(255, 255, 255, 0.9) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    backdrop-filter: blur(20px) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+}

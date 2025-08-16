@@ -3,18 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NuroSight - {% block title %}{% endblock %}</title>
+    <title>NeuroSight - {% block title %}{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/animated-background.css') }}">
 </head>
-<body class="min-h-screen bg-gradient-to-br from-sky-100 via-rose-100 to-violet-100">
-    <nav class="text-white backdrop-blur supports-[backdrop-filter]:backdrop-blur bg-white/20 border-b border-white/30 shadow-sm">
+<body class="min-h-screen">
+    <!-- Animated Background -->
+    <div class="animated-background">
+        <!-- Grid overlay -->
+        <div class="grid-overlay"></div>
+        
+        <!-- Gradient orbs -->
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        
+        <!-- Floating shapes -->
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+        <div class="shape shape-4"></div>
+        <div class="shape shape-5"></div>
+        <div class="shape shape-6"></div>
+        
+        <!-- Plus signs -->
+        <div class="plus plus-1"></div>
+        <div class="plus plus-2"></div>
+        <div class="plus plus-3"></div>
+        <div class="plus plus-4"></div>
+        <div class="plus plus-5"></div>
+        
+        <!-- Floating particles -->
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        
+        {% block tech_cards %}{% endblock %}
+    </div>
+
+    <!-- Content Wrapper -->
+    <div class="content-wrapper">
+        <nav class="nav-enhanced text-slate-800">
         <div class="container mx-auto px-6 py-4">
             <div class="flex items-center justify-between">
                 <div class="text-xl font-bold text-slate-900">
-                    <a href="/">NuroSight</a>
+                    <a href="/">NeuroSight</a>
                 </div>
                 <div class="space-x-4">
                     <a href="/" class="text-slate-800 hover:text-slate-900">Home</a>
@@ -31,12 +68,13 @@
         {% block content %}{% endblock %}
     </main>
 
-    <div id="loading-spinner" class="fixed inset-0 bg-black/20 flex items-center justify-center hidden backdrop-blur">
+    <div id="loading-spinner" class="fixed inset-0 bg-black/20 flex items-center justify-center hidden backdrop-blur z-50">
         <div class="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
     </div>
 
-    <div id="error-toast" class="fixed bottom-4 right-4 bg-white/80 backdrop-blur text-red-700 px-6 py-4 rounded-lg shadow-lg hidden border border-red-200">
+    <div id="error-toast" class="fixed bottom-4 right-4 bg-white/80 backdrop-blur text-red-700 px-6 py-4 rounded-lg shadow-lg hidden border border-red-200 z-50">
         <span id="error-message"></span>
     </div>
+    </div> <!-- End content-wrapper -->
 </body>
 </html>

@@ -3,37 +3,48 @@
 {% block title %}Welcome{% endblock %}
 
 {% block content %}
-<section class="min-h-[70vh] flex flex-col items-center justify-center text-center">
-  <div class="max-w-3xl mx-auto">
-    <h1 class="text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900">
-      Discover Insights with NeuroSight
-    </h1>
-    <p class="mt-6 text-lg md:text-xl text-gray-700">
-      Upload your data, train models, and visualize predictions — all in one streamlined experience.
-    </p>
+<section class="min-h-[70vh] flex items-center justify-center">
+  <div class="container mx-auto px-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <!-- Left Column - Content -->
+      <div class="text-center lg:text-left">
+        <h1 class="text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900">
+          Discover Insights with NeuroSight
+        </h1>
+        <p class="mt-6 text-lg md:text-xl text-gray-700">
+          Upload your data, train models, and visualize predictions — all in one streamlined experience.
+        </p>
 
-    <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-      <a href="/home" class="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold shadow hover:bg-blue-300 transition">
-        Get Started
-      </a>
-      <a href="/dashboard" class="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-white/70 backdrop-blur border border-white/60 text-blue-300 font-semibold shadow hover:bg-white transition">
-        View Dashboard
-      </a>
-    </div>
-  </div>
+        <div class="mt-10 flex flex-col sm:flex-row items-center lg:items-start gap-4">
+          <a href="/home" class="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold shadow-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105">
+            Get Started
+          </a>
+          <a href="/dashboard" class="inline-flex items-center justify-center px-6 py-3 rounded-xl glass-enhanced text-slate-800 font-semibold shadow-lg hover:bg-white/90 transition-all duration-300 transform hover:scale-105">
+            View Dashboard
+          </a>
+        </div>
+      </div>
 
-  <div class="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl w-full">
-    <div class="bg-white/70 backdrop-blur rounded-2xl shadow p-6">
-      <h3 class="text-lg font-semibold">Seamless Uploads</h3>
-      <p class="mt-2 text-gray-600">CSV or Excel supported with automatic encoding handling and validation.</p>
+      <!-- Right Column - Programming Image -->
+      <div class="flex justify-center lg:justify-end">
+        <img src="{{ url_for('static', filename='images/Programing-01.svg') }}" alt="Programming" class="w-full max-w-md h-auto">
+      </div>
     </div>
-    <div class="bg-white/70 backdrop-blur rounded-2xl shadow p-6">
-      <h3 class="text-lg font-semibold">Smart Training</h3>
-      <p class="mt-2 text-gray-600">Cleans data, tries multiple models, and picks the best performer.</p>
-    </div>
-    <div class="bg-white/70 backdrop-blur rounded-2xl shadow p-6">
-      <h3 class="text-lg font-semibold">Insightful Dashboard</h3>
-      <p class="mt-2 text-gray-600">See model metrics and feature importance at a glance.</p>
+
+    <!-- Feature Cards -->
+    <div class="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+      <div class="glass-enhanced p-6">
+        <h3 class="text-lg font-semibold text-slate-800">Seamless Uploads</h3>
+        <p class="mt-2 text-slate-600">CSV or Excel supported with automatic encoding handling and validation.</p>
+      </div>
+      <div class="glass-enhanced p-6">
+        <h3 class="text-lg font-semibold text-slate-800">Smart Training</h3>
+        <p class="mt-2 text-slate-600">Cleans data, tries multiple models, and picks the best performer.</p>
+      </div>
+      <div class="glass-enhanced p-6">
+        <h3 class="text-lg font-semibold text-slate-800">Insightful Dashboard</h3>
+        <p class="mt-2 text-slate-600">See model metrics and feature importance at a glance.</p>
+      </div>
     </div>
   </div>
 </section>

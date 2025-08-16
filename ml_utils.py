@@ -50,12 +50,31 @@ def load_and_clean_data(filepath):
     numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns
     categorical_cols = df.select_dtypes(include=['object']).columns
     
-    # Handle missing values
+    # Handle missing values and NaN values
+    # First, replace various forms of NaN/None values
+    df = df.replace([np.inf, -np.inf], np.nan)  # Replace infinite values with NaN
+    df = df.replace('', np.nan)  # Replace empty strings with NaN
+    df = df.replace('NULL', np.nan)  # Replace 'NULL' strings with NaN
+    df = df.replace('null', np.nan)  # Replace 'null' strings with NaN
+    df = df.replace('None', np.nan)  # Replace 'None' strings with NaN
+    
+    # Handle missing values in numeric columns
     if len(numeric_cols) > 0:
+        # Check for NaN values in numeric columns
+        nan_counts = df[numeric_cols].isna().sum()
+        if nan_counts.sum() > 0:
+            print(f"Found NaN values in numeric columns: {nan_counts[nan_counts > 0].to_dict()}")
+        
         num_imputer = SimpleImputer(strategy='mean')
         df[numeric_cols] = num_imputer.fit_transform(df[numeric_cols])
     
+    # Handle missing values in categorical columns
     if len(categorical_cols) > 0:
+        # Check for NaN values in categorical columns
+        nan_counts = df[categorical_cols].isna().sum()
+        if nan_counts.sum() > 0:
+            print(f"Found NaN values in categorical columns: {nan_counts[nan_counts > 0].to_dict()}")
+        
         cat_imputer = SimpleImputer(strategy='most_frequent')
         df[categorical_cols] = cat_imputer.fit_transform(df[categorical_cols])
     

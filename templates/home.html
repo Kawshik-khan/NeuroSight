@@ -2,13 +2,15 @@
 
 {% block title %}Home{% endblock %}
 
+
+
 {% block content %}
 <div class="max-w-4xl mx-auto">
-    <h1 class="text-4xl font-bold mb-8 text-center">Welcome to NuroSight</h1>
+    <h1 class="text-4xl font-bold mb-8 text-center text-slate-800">Welcome to NeuroSight</h1>
     
-    <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
-        <h2 class="text-2xl font-semibold mb-4">Start Your Analysis</h2>
-        <p class="mb-6 text-gray-600">Upload your CSV or Excel file to begin analyzing your data and training machine learning models.</p>
+    <div class="glass-enhanced p-8 mb-8">
+        <h2 class="text-2xl font-semibold mb-4 text-slate-800">Start Your Analysis</h2>
+        <p class="mb-6 text-slate-600">Upload your CSV or Excel file to begin analyzing your data and training machine learning models.</p>
         
         <form id="upload-form" action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" class="space-y-4">
             <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center transition-all duration-200">
@@ -91,9 +93,9 @@
     </div>
     
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-white rounded-lg shadow-lg p-6">
-            <h3 class="text-xl font-semibold mb-4">Features</h3>
-            <ul class="list-disc list-inside text-gray-600 space-y-2">
+        <div class="glass-enhanced p-6">
+            <h3 class="text-xl font-semibold mb-4 text-slate-800">Features</h3>
+            <ul class="list-disc list-inside text-slate-600 space-y-2">
                 <li>Automated data cleaning and preprocessing</li>
                 <li>Multiple machine learning models</li>
                 <li>Interactive visualizations</li>
@@ -101,9 +103,9 @@
             </ul>
         </div>
         
-        <div class="bg-white rounded-lg shadow-lg p-6">
-            <h3 class="text-xl font-semibold mb-4">Supported File Types</h3>
-            <ul class="list-disc list-inside text-gray-600 space-y-2">
+        <div class="glass-enhanced p-6">
+            <h3 class="text-xl font-semibold mb-4 text-slate-800">Supported File Types</h3>
+            <ul class="list-disc list-inside text-slate-600 space-y-2">
                 <li>CSV files (.csv)</li>
                 <li>Excel files (.xlsx)</li>
             </ul>
